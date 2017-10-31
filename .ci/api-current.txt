@@ -2762,7 +2762,7 @@ public interface net.corda.core.serialization.SerializationWhitelist
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.serialization.SerializationToken toToken(net.corda.core.serialization.SerializeAsTokenContext)
 ##
 public interface net.corda.core.serialization.SerializeAsTokenContext
-  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.ServiceHub getServiceHub()
+  @org.jetbrains.annotations.NotNull public abstract net.corda.core.node.services.AttachmentStorage getAttachments()
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.serialization.SerializeAsToken getSingleton(String)
   public abstract void putSingleton(net.corda.core.serialization.SerializeAsToken)
 ##

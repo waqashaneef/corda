@@ -104,6 +104,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             doReturn(null).whenever(it).devModeOptions
         }
         val validatedTransactions = MockTransactionStorage()
+        val attachments = MockAttachmentStorage()
         database.transaction {
             services = rigorousMock<Services>().also {
                 doReturn(configuration).whenever(it).configuration
@@ -114,10 +115,10 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 }).whenever(it).networkMapCache
                 doReturn(myInfo).whenever(it).myInfo
                 doReturn(kms).whenever(it).keyManagementService
-                doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), MockAttachmentStorage())).whenever(it).cordappProvider
+                doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.testing.contracts")), attachments)).whenever(it).cordappProvider
                 doReturn(NodeVaultService(testClock, kms, validatedTransactions, database.hibernateConfig)).whenever(it).vaultService
                 doReturn(this@NodeSchedulerServiceTest).whenever(it).testReference
-
+                doReturn(attachments).whenever(it).attachments
             }
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             mockSMM = StateMachineManagerImpl(services, DBCheckpointStorage(), smmExecutor, database)
