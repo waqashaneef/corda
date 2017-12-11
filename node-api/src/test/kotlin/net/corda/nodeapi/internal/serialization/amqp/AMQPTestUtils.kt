@@ -7,6 +7,8 @@ import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import java.io.NotSerializableException
 
 fun testDefaultFactory() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+fun testDefaultFactoryNoEvolution() = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader(),
+        EvolutionSerializerGetterTesting())
 fun testDefaultFactoryWithWhitelist() = SerializerFactory(EmptyWhitelist, ClassLoader.getSystemClassLoader())
 
 class TestSerializationOutput(
