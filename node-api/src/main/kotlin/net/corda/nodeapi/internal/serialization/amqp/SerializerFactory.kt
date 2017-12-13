@@ -102,23 +102,22 @@ open class SerializerFactory(
     }
 
     /**
-     * Try and infer concrete types for any generics type variables for the actual class encountered, based on the declared
-     * type.
+     * Try and infer concrete types for any generics type variables for the actual class encountered,
+     * based on the declared type.
      */
     // TODO: test GenericArrayType
-    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? {
-        return when (declaredType) {
-            is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
-        // Nothing to infer, otherwise we'd have ParameterizedType
-            is Class<*> -> actualClass
-            is GenericArrayType -> {
-                val declaredComponent = declaredType.genericComponentType
-                inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
-            }
-            is TypeVariable<*> -> actualClass
-            is WildcardType -> actualClass
-            else -> null
+    private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>,
+                                   declaredType: Type) : Type? = when (declaredType) {
+        is ParameterizedType -> inferTypeVariables(actualClass, declaredClass, declaredType)
+    // Nothing to infer, otherwise we'd have ParameterizedType
+        is Class<*> -> actualClass
+        is GenericArrayType -> {
+            val declaredComponent = declaredType.genericComponentType
+            inferTypeVariables(actualClass?.componentType, declaredComponent.asClass()!!, declaredComponent)?.asArray()
         }
+        is TypeVariable<*> -> actualClass
+        is WildcardType -> actualClass
+        else -> null
     }
 
     /**
@@ -332,23 +331,19 @@ open class SerializerFactory(
 
         private val namesOfPrimitiveTypes: Map<String, Class<*>> = primitiveTypeNames.map { it.value to it.key }.toMap()
 
-        fun nameForType(type: Type): String {
-            val rtn = when (type) {
-                is Class<*> -> {
-                    primitiveTypeName(type) ?: if (type.isArray) {
-                        "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
-                    } else type.name
-                }
-                is ParameterizedType -> {
-                    "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
-                }
-                is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
-                is WildcardType -> "?"
-                is TypeVariable<*> -> "?"
-                else -> throw NotSerializableException("Unable to render type $type to a string.")
+        fun nameForType(type: Type): String =  when (type) {
+            is Class<*> -> {
+                primitiveTypeName(type) ?: if (type.isArray) {
+                    "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
+                } else type.name
             }
-
-            return rtn
+            is ParameterizedType -> {
+                "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
+            }
+            is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
+            is WildcardType -> "?"
+            is TypeVariable<*> -> "?"
+            else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 
         private fun typeForName(name: String, classloader: ClassLoader): Type {
