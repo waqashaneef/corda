@@ -370,6 +370,7 @@ class DriverDSLImpl(
                         customRootCert = compatibilityZone?.rootCert
                 )
             } else {
+                val singularIdentity = spec.cluster is ClusterSpec.Raft && spec.cluster.singularServiceIdentity
                 ServiceIdentityGenerator.generateToDisk(
                         dirs = generateNodeNames(spec).map { baseDirectory(it) },
                         serviceName = spec.name,
@@ -377,7 +378,8 @@ class DriverDSLImpl(
                                 validating = spec.validating,
                                 raft = spec.cluster is ClusterSpec.Raft
                         ),
-                        customRootCert = compatibilityZone?.rootCert
+                        customRootCert = compatibilityZone?.rootCert,
+                        singularIdentity = singularIdentity
                 )
             }
             NotaryInfo(identity, spec.validating)
