@@ -122,7 +122,7 @@ class DistributedServiceTests {
     }
 
     @Test
-    fun `cluster shares a single keypair instead of using a composite public key and individual private keys`() {
+    fun `requests are distributed evenly amongst the nodes when cluster use singular public key instead of a composite one`() {
         setup(true) {
             checkRequestsDistributedEvenly()
         }

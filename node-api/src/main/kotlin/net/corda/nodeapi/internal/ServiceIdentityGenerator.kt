@@ -11,6 +11,8 @@ import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.crypto.*
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import java.security.KeyPair
+import java.security.PublicKey
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 
@@ -52,12 +54,7 @@ object ServiceIdentityGenerator {
         val keyPair = generateKeyPair()
         val notaryKey = keyPair.public
         dirs.forEach { dir ->
-            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.NODE_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
-            val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
-            val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
-            keystore.setCertificateEntry("$serviceId-composite-key", serviceKeyCert.cert)
-            keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
-            keystore.save(certPath, "cordacadevpass")
+            generateCertificates(issuer, serviceName, keyPair, notaryKey, dir, serviceId, rootCert)
         }
         return Party(serviceName, notaryKey)
     }
@@ -66,14 +63,18 @@ object ServiceIdentityGenerator {
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
         keyPairs.zip(dirs) { keyPair, dir ->
-            val serviceKeyCert = X509Utilities.createCertificate(CertificateType.NODE_CA, issuer.certificate, issuer.keyPair, serviceName, keyPair.public)
-            val compositeKeyCert = X509Utilities.createCertificate(CertificateType.NODE_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
-            val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
-            val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
-            keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)
-            keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
-            keystore.save(certPath, "cordacadevpass")
+            generateCertificates(issuer, serviceName, keyPair, notaryKey, dir, serviceId, rootCert)
         }
         return Party(serviceName, notaryKey)
+    }
+
+    private fun generateCertificates(issuer: CertificateAndKeyPair, serviceName: CordaX500Name, keyPair: KeyPair, notaryKey: PublicKey, dir: Path, serviceId: String, rootCert: Certificate?) {
+        val serviceKeyCert = X509Utilities.createCertificate(CertificateType.NODE_CA, issuer.certificate, issuer.keyPair, serviceName, keyPair.public)
+        val compositeKeyCert = X509Utilities.createCertificate(CertificateType.NODE_CA, issuer.certificate, issuer.keyPair, serviceName, notaryKey)
+        val certPath = (dir / "certificates").createDirectories() / "distributedService.jks"
+        val keystore = loadOrCreateKeyStore(certPath, "cordacadevpass")
+        keystore.setCertificateEntry("$serviceId-composite-key", compositeKeyCert.cert)
+        keystore.setKeyEntry("$serviceId-private-key", keyPair.private, "cordacadevkeypass".toCharArray(), arrayOf(serviceKeyCert.cert, issuer.certificate.cert, rootCert))
+        keystore.save(certPath, "cordacadevpass")
     }
 }
