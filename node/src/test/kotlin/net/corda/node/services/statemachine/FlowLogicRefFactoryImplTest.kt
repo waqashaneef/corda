@@ -5,6 +5,7 @@ import net.corda.core.flows.IllegalFlowLogicException
 import net.corda.core.flows.SchedulableFlow
 import org.junit.Test
 import java.time.Duration
+import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
 
 class FlowLogicRefFactoryImplTest {
@@ -39,7 +40,7 @@ class FlowLogicRefFactoryImplTest {
 
     @Test
     fun `create kotlin no arg`() {
-        FlowLogicRefFactoryImpl.create(KotlinNoArgFlowLogic::class.java)
+        FlowLogicRefFactoryImpl.create(KotlinNoArgFlowLogic::class.jvmName)
     }
 
     @Test
@@ -50,7 +51,7 @@ class FlowLogicRefFactoryImplTest {
 
     @Test
     fun `create primary`() {
-        FlowLogicRefFactoryImpl.create(KotlinFlowLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
+        FlowLogicRefFactoryImpl.create(KotlinFlowLogic::class.jvmName, ParamType1(1), ParamType2("Hello Jack"))
     }
 
     @Test
@@ -78,6 +79,6 @@ class FlowLogicRefFactoryImplTest {
 
     @Test(expected = IllegalFlowLogicException::class)
     fun `create for non-schedulable flow logic`() {
-        FlowLogicRefFactoryImpl.create(NonSchedulableFlow::class.java)
+        FlowLogicRefFactoryImpl.create(NonSchedulableFlow::class.jvmName)
     }
 }
