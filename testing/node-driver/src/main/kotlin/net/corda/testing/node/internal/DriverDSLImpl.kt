@@ -43,8 +43,10 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.addOrReplaceCertificate
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.save
+import net.corda.testing.ALICE_NAME
+import net.corda.testing.BOB_NAME
+import net.corda.testing.DUMMY_BANK_A_NAME
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.*
 import net.corda.testing.driver.*
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
@@ -126,8 +128,7 @@ class DriverDSLImpl(
             val jarPattern = jarNamePattern.toRegex()
             val jarFileUrl = urls.first { jarPattern.matches(it.path) }
             Paths.get(jarFileUrl.toURI()).toString()
-        }
-        catch(e: Exception) {
+        } catch (e: Exception) {
             log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
             throw e
         }
@@ -362,25 +363,39 @@ class DriverDSLImpl(
 
     private fun generateNotaryIdentities(): List<NotaryInfo> {
         return notarySpecs.map { spec ->
-            val identity = if (spec.cluster == null) {
-                ServiceIdentityGenerator.generateToDisk(
-                        dirs = listOf(baseDirectory(spec.name)),
-                        serviceName = spec.name,
-                        serviceId = "identity",
-                        customRootCert = compatibilityZone?.rootCert
-                )
-            } else {
-                val singularIdentity = spec.cluster is ClusterSpec.Raft && spec.cluster.singularServiceIdentity
-                ServiceIdentityGenerator.generateToDisk(
-                        dirs = generateNodeNames(spec).map { baseDirectory(it) },
-                        serviceName = spec.name,
-                        serviceId = NotaryService.constructId(
-                                validating = spec.validating,
-                                raft = spec.cluster is ClusterSpec.Raft
-                        ),
-                        customRootCert = compatibilityZone?.rootCert,
-                        singularIdentity = singularIdentity
-                )
+            val identity = when (spec.cluster) {
+                null -> {
+                    ServiceIdentityGenerator.generateToDisk(
+                            dirs = listOf(baseDirectory(spec.name)),
+                            serviceName = spec.name,
+                            serviceId = "identity",
+                            customRootCert = compatibilityZone?.rootCert
+
+                    )
+                }
+                is ClusterSpec.Raft -> {
+                    ServiceIdentityGenerator.generateToDisk(
+                            dirs = generateNodeNames(spec).map { baseDirectory(it) },
+                            serviceName = spec.name,
+                            serviceId = NotaryService.constructId(
+                                    validating = spec.validating,
+                                    raft = true
+                            ),
+                            customRootCert = compatibilityZone?.rootCert
+                    )
+                }
+                is DummyClusterSpec -> {
+                    ServiceIdentityGenerator.generateToDiskSingular(
+                            dirs = generateNodeNames(spec).map { baseDirectory(it) },
+                            serviceName = spec.name,
+                            serviceId = NotaryService.constructId(
+                                    validating = spec.validating,
+                                    raft = true
+                            ),
+                            customRootCert = compatibilityZone?.rootCert
+                    )
+                }
+                else -> throw IllegalArgumentException("Notary cluster specification ${spec.cluster} not supported")
             }
             NotaryInfo(identity, spec.validating)
         }
@@ -395,6 +410,9 @@ class DriverDSLImpl(
             when {
                 it.cluster == null -> startSingleNotary(it)
                 it.cluster is ClusterSpec.Raft -> startRaftNotaryCluster(it)
+                // DummyCluster is used for testing the notary communication path, and it does not matter
+                // which underlying consensus algorithm is used, so we just stick to Raft.
+                it.cluster is DummyClusterSpec -> startRaftNotaryCluster(it)
                 else -> throw IllegalArgumentException("BFT-SMaRt not supported")
             }
         }
@@ -649,7 +667,7 @@ class DriverDSLImpl(
                     "name" to nodeConf.myLegalName,
                     "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
                     "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
-                    "log4j2.debug" to if(debugPort != null) "true" else "false"
+                    "log4j2.debug" to if (debugPort != null) "true" else "false"
             )
 
             if (cordappPackages.isNotEmpty()) {

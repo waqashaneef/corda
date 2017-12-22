@@ -29,40 +29,47 @@ object ServiceIdentityGenerator {
      * @param threshold The threshold for the generated group [CompositeKey].
      * @param customRootCert the certificate to use a Corda root CA. If not specified the one in
      *      certificates/cordadevcakeys.jks is used.
-     * @param singularIdentity If *true*, the generated group identity will consist of a single public key
-     *      (instead of a composite key), and each node will receive a copy of the private key.
      */
     fun generateToDisk(dirs: List<Path>,
                        serviceName: CordaX500Name,
                        serviceId: String,
                        threshold: Int = 1,
-                       customRootCert: X509Certificate? = null,
-                       singularIdentity: Boolean = false): Party {
+                       customRootCert: X509Certificate? = null): Party {
 
-        log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
+        log.trace { "Generating a composite group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
         val issuer = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
         val rootCert = customRootCert ?: caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
 
-        return if (singularIdentity) {
-            generateSingular(dirs, issuer, serviceName, serviceId, rootCert)
-        }
-        else generateComposite(dirs, threshold, issuer, serviceName, serviceId, rootCert)
-    }
-
-    private fun generateSingular(dirs: List<Path>, issuer: CertificateAndKeyPair, serviceName: CordaX500Name, serviceId: String, rootCert: Certificate?): Party {
-        val keyPair = generateKeyPair()
-        val notaryKey = keyPair.public
-        dirs.forEach { dir ->
+        val keyPairs = (1..dirs.size).map { generateKeyPair() }
+        val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
+        keyPairs.zip(dirs) { keyPair, dir ->
             generateCertificates(issuer, serviceName, keyPair, notaryKey, dir, serviceId, rootCert)
         }
         return Party(serviceName, notaryKey)
     }
 
-    private fun generateComposite(dirs: List<Path>, threshold: Int, issuer: CertificateAndKeyPair, serviceName: CordaX500Name, serviceId: String, rootCert: Certificate?): Party {
-        val keyPairs = (1..dirs.size).map { generateKeyPair() }
-        val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
-        keyPairs.zip(dirs) { keyPair, dir ->
+    /**
+     * Similar to [generateToDisk], but the generated distributed service identity will consist of a single public key
+     * instead of a composite key, and each node will receive a copy of the private key.
+     *
+     * @param dirs List of node directories to place the generated identity and key pairs in.
+     * @param serviceName The legal name of the distributed service.
+     * @param customRootCert the certificate to use a Corda root CA. If not specified the one in
+     *      certificates/cordadevcakeys.jks is used.
+     */
+    fun generateToDiskSingular(dirs: List<Path>,
+                               serviceName: CordaX500Name,
+                               serviceId: String,
+                               customRootCert: X509Certificate? = null): Party {
+        log.trace { "Generating a singular group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
+        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
+        val issuer = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+        val rootCert = customRootCert ?: caKeyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)
+
+        val keyPair = generateKeyPair()
+        val notaryKey = keyPair.public
+        dirs.forEach { dir ->
             generateCertificates(issuer, serviceName, keyPair, notaryKey, dir, serviceId, rootCert)
         }
         return Party(serviceName, notaryKey)

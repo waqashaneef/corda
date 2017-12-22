@@ -17,8 +17,8 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.DummyClusterSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import rx.Observable
@@ -44,7 +44,7 @@ class DistributedServiceTests {
                         NotarySpec(
                                 DUMMY_NOTARY_NAME,
                                 rpcUsers = listOf(testUser),
-                                cluster = ClusterSpec.Raft(clusterSize = 3, singularServiceIdentity = singularIdentity))
+                                cluster = DummyClusterSpec(clusterSize = 3, singularServiceIdentity = singularIdentity))
                 )
         ) {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()

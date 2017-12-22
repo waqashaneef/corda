@@ -12,16 +12,11 @@ data class NotarySpec(
         val cluster: ClusterSpec? = null
 )
 
-sealed class ClusterSpec {
+abstract class ClusterSpec {
     abstract val clusterSize: Int
 
     data class Raft(
-            override val clusterSize: Int,
-            /**
-             * If *true*, the cluster will use the same shared "singular" key pair for the service identity,
-             * if *false* – a shared composite public key with individual private keys.
-             */
-            val singularServiceIdentity: Boolean = false
+            override val clusterSize: Int
     ) : ClusterSpec() {
         init {
             require(clusterSize > 0)
