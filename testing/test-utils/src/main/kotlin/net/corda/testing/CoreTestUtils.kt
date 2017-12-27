@@ -12,7 +12,6 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.cert
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
@@ -23,11 +22,14 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralSubtree
+import org.bouncycastle.asn1.x509.NameConstraints
 import java.math.BigInteger
 import java.nio.file.Files
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.X509Certificate
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -89,8 +91,8 @@ fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration = object : SSLC
 }
 
 fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
-    val trustRoot: X509CertificateHolder = DEV_TRUST_ROOT
-    val intermediate: CertificateAndKeyPair = DEV_CA
+    val trustRoot: X509Certificate = DEV_ROOT_CA.certificate
+    val intermediate: CertificateAndKeyPair = DEV_INTERMEDIATE_CA
 
     val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediate, party.name)
 
@@ -98,11 +100,10 @@ fun getTestPartyAndCertificate(party: Party): PartyAndCertificate {
             CertificateType.LEGAL_IDENTITY,
             nodeCaCert,
             nodeCaKeyPair,
-            party.name,
+            party.name.x500Principal,
             party.owningKey)
 
-    val pathElements = listOf(identityCert, nodeCaCert, intermediate.certificate, trustRoot)
-    val certPath = X509CertificateFactory().generateCertPath(pathElements.map(X509CertificateHolder::cert))
+    val certPath = X509CertificateFactory().generateCertPath(identityCert, nodeCaCert, intermediate.certificate, trustRoot)
     return PartyAndCertificate(certPath)
 }
 
