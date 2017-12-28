@@ -30,7 +30,7 @@ class NetworkMapClientTest {
 
     @Before
     fun setUp() {
-        server = NetworkMapServer(cacheTimeout, PortAllocation.Incremental(10000).nextHostAndPort(), root_ca = ROOT_CA)
+        server = NetworkMapServer(cacheTimeout, PortAllocation.Incremental(10000).nextHostAndPort(), rootCa = ROOT_CA)
         val hostAndPort = server.start()
         networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_TRUST_ROOT.cert)
     }
